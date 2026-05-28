@@ -1,0 +1,101 @@
+# Project config for the CAPI core Prow dashboard.
+#
+# Consumed by the prow-ai-dashboard fetcher at
+#   github.com/willie-yao/prow-ai-dashboard
+# via the reusable workflow in .github/workflows/deploy.yml. Together with
+# prompts/system.md this is the full project ownership surface; the engine
+# repo holds no CAPI-specific configuration.
+
+id: capi
+name: "Cluster API"
+short_name: "CAPI"
+
+# Where in kubernetes/test-infra to find the prow job YAMLs.
+source:
+  test_infra_path: "config/jobs/kubernetes-sigs/cluster-api"
+  # Only files whose name starts with this prefix are treated as job
+  # configs. See backend/internal/prow/jobconfig/fetch.go in the engine
+  # repo for the exact filter rule.
+  file_prefix: "cluster-api-"
+
+# Filter jobs by their testgrid-dashboards annotation. Only jobs that
+# advertise this dashboard show up; release-branch periodics (which
+# advertise cluster-api-core-1.X) are filtered out.
+testgrid:
+  dashboard: "cluster-api-core-main"
+
+# Categories used to group jobs on the landing page. Rules are evaluated in
+# order; first lowercase substring match wins. Jobs with no match are
+# bucketed under "other". The frontend renders sections in this same order.
+#
+# Note: "mink8s" comes before "e2e" so periodic-cluster-api-e2e-mink8s-main
+# and periodic-cluster-api-test-mink8s-main both land in the mink8s lane,
+# which surfaces "minimum-supported k8s is red" as its own slice.
+categories:
+  - match: "conformance"
+    id: "conformance"
+    label: "Conformance"
+  - match: "upgrade"
+    id: "upgrade"
+    label: "Upgrade"
+  - match: "mink8s"
+    id: "mink8s"
+    label: "Min K8s"
+  - match: "e2e"
+    id: "e2e"
+    label: "E2E"
+  - match: "test"
+    id: "unit"
+    label: "Unit / Integration"
+
+# Display order for category sections on the landing page. This decouples
+# match precedence (above, where specific rules MUST come before broader
+# ones) from section ordering in the UI.
+category_display_order:
+  - e2e
+  - upgrade
+  - conformance
+  - mink8s
+  - unit
+
+# GCS bucket holding build artifacts (started.json, finished.json,
+# junit.e2e_suite.1.xml, build-log.txt, machine logs, etc.).
+gcs:
+  bucket: "kubernetes-ci-logs"
+
+# UI-facing branding. Frontend reads these from data/manifest.json at
+# runtime; backend uses site_url for notification deep links.
+branding:
+  title: "CAPI Prow Dashboard"
+  base_path: "/capi-prow-ai-dashboard"
+  site_url: "https://willie-yao.github.io/capi-prow-ai-dashboard"
+  source_repo:
+    owner: "kubernetes-sigs"
+    name: "cluster-api"
+
+# CAPI-specific knobs. Used when artifacts.collector is "capi" — the
+# collector groups GCS debug artifacts by cluster names matching this
+# prefix. CAPI core E2E uses spec-name prefixes (quick-start, md-rollout,
+# etc.) without a common prefix, so this is left empty and the collector
+# falls back to its generic substring matcher.
+capi:
+  cluster_name_prefix: ""
+
+# Per-build artifact collector. "capi" knows the artifacts/clusters/{name}/
+# machines/{container}/... layout used by Cluster API providers.
+artifacts:
+  collector: "capi"
+
+# AI module + endpoint. The system prompt is composed at fetcher startup
+# from the engine's universal Prow base + this repo's prompts/system.md +
+# the engine's JSON response schema, so changing the model behavior is
+# usually done by editing prompts/system.md, not this file.
+#
+# Endpoint, model, and headers can target any OpenAI-compatible chat
+# completions API. The defaults here point at GitHub Copilot; see
+# docs/ai-providers.md in the engine repo for Nvidia Dynamo / Azure
+# OpenAI / OpenAI / Ollama snippets.
+ai:
+  module: "capi"
+  endpoint: "https://api.githubcopilot.com/chat/completions"
+  model: "claude-opus-4.6"
