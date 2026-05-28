@@ -26,6 +26,8 @@ jobs:
     uses: willie-yao/prow-ai-dashboard/.github/workflows/reusable-deploy.yml@main
     with:
       project_dir: "."
+      ai-model: ${{ vars.AI_MODEL }}
+      ai-endpoint: ${{ vars.AI_ENDPOINT }}
     secrets:
       AI_TOKEN: ${{ secrets.AI_TOKEN }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
