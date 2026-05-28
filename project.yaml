@@ -98,7 +98,12 @@ artifacts:
 ai:
   module: "capi"
   endpoint: "https://api.githubcopilot.com/chat/completions"
-  model: "claude-opus-4.6"
+  # claude-opus-4.7-xhigh: extra-high reasoning effort, 200K context.
+  # Marked "(Internal only)" in the Copilot model list but currently
+  # accepted by api.githubcopilot.com. AI_MODEL env override (set via
+  # the reusable workflow's `ai-model` input) wins over this value for
+  # consumers whose AI_TOKEN doesn't have access.
+  model: "claude-opus-4.7-xhigh"
 
   # Per-failure evidence collected by the capi module before each AI call.
   # Every field below is optional; omitting a field falls back to the
@@ -112,3 +117,16 @@ ai:
       - containerd.log
       - journal.log
       - kern.log
+
+  # Agentic mode: instead of the curator pre-fetching evidence based on the
+  # `evidence:` block above, the LLM browses GCS itself via four function-
+  # calling tools (list/read/tail/grep) and decides what's relevant. Requires
+  # an endpoint that supports OpenAI-style function calling (Copilot does).
+  #
+  # always: true routes every failure through agentic mode regardless of
+  # module heuristics. Used here for end-to-end validation against the
+  # CAPI dataset before any AgenticPreferrer heuristics ship in the engine.
+  # Expect ~10x the token cost and ~7x the wall clock vs curator mode.
+  agentic:
+    enabled: true
+    always: true
