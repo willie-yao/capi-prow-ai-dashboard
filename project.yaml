@@ -99,3 +99,16 @@ ai:
   module: "capi"
   endpoint: "https://api.githubcopilot.com/chat/completions"
   model: "claude-opus-4.6"
+
+  # Per-failure evidence collected by the capi module before each AI call.
+  # Every field below is optional; omitting a field falls back to the
+  # engine default. CAPI core only customizes machine_logs (CAPD jobs
+  # collect a kern.log alongside the standard kubelet/containerd/journal
+  # set) and the upstream controller_logs defaults; everything else is
+  # the engine default.
+  evidence:
+    machine_logs:
+      - kubelet.log
+      - containerd.log
+      - journal.log
+      - kern.log
