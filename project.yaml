@@ -1,10 +1,5 @@
 # Project config for the CAPI core Prow dashboard.
-#
-# Consumed by the prow-ai-dashboard fetcher at
-#   github.com/willie-yao/prow-ai-dashboard
-# via the reusable workflow in .github/workflows/deploy.yml. Together with
-# prompts/system.md this is the full project ownership surface; the engine
-# repo holds no CAPI-specific configuration.
+# Consumed by the prow-ai-dashboard engine via .github/workflows/deploy.yml.
 
 id: capi
 name: "Cluster API"
@@ -13,24 +8,15 @@ short_name: "CAPI"
 # Where in kubernetes/test-infra to find the prow job YAMLs.
 source:
   test_infra_path: "config/jobs/kubernetes-sigs/cluster-api"
-  # Only files whose name starts with this prefix are treated as job
-  # configs. See backend/internal/prow/jobconfig/fetch.go in the engine
-  # repo for the exact filter rule.
   file_prefix: "cluster-api-"
 
-# Filter jobs by their testgrid-dashboards annotation. Only jobs that
-# advertise this dashboard show up; release-branch periodics (which
-# advertise cluster-api-core-1.X) are filtered out.
+# Only jobs that advertise this testgrid dashboard are included.
+# Release-branch periodics (cluster-api-core-1.X) are filtered out.
 testgrid:
   dashboard: "cluster-api-core-main"
 
-# Categories used to group jobs on the landing page. Rules are evaluated in
-# order; first lowercase substring match wins. Jobs with no match are
-# bucketed under "other". The frontend renders sections in this same order.
-#
-# Note: "mink8s" comes before "e2e" so periodic-cluster-api-e2e-mink8s-main
-# and periodic-cluster-api-test-mink8s-main both land in the mink8s lane,
-# which surfaces "minimum-supported k8s is red" as its own slice.
+# Job grouping. Rules are evaluated in order; first lowercase substring match
+# wins. "mink8s" comes before "e2e" so mink8s jobs surface as their own lane.
 categories:
   - match: "conformance"
     id: "conformance"
@@ -48,9 +34,7 @@ categories:
     id: "unit"
     label: "Unit / Integration"
 
-# Display order for category sections on the landing page. This decouples
-# match precedence (above, where specific rules MUST come before broader
-# ones) from section ordering in the UI.
+# Display order for category sections on the landing page.
 category_display_order:
   - e2e
   - upgrade
@@ -58,13 +42,11 @@ category_display_order:
   - mink8s
   - unit
 
-# GCS bucket holding build artifacts (started.json, finished.json,
-# junit.e2e_suite.1.xml, build-log.txt, machine logs, etc.).
+# GCS bucket holding build artifacts.
 gcs:
   bucket: "kubernetes-ci-logs"
 
-# UI-facing branding. Frontend reads these from data/manifest.json at
-# runtime; backend uses site_url for notification deep links.
+# UI branding. Frontend reads these from data/manifest.json at runtime.
 branding:
   title: "CAPI Prow Dashboard"
   base_path: "/capi-prow-ai-dashboard"
@@ -73,44 +55,23 @@ branding:
     owner: "kubernetes-sigs"
     name: "cluster-api"
 
-# CAPI-specific knobs. Used when artifacts.collector is "capi" — the
-# collector groups GCS debug artifacts by cluster names matching this
-# prefix. CAPI core E2E uses spec-name prefixes (quick-start, md-rollout,
-# etc.) without a common prefix, so this is left empty and the collector
-# falls back to its generic substring matcher.
+# CAPI core E2E uses spec-name prefixes (quick-start, md-rollout, etc.)
+# without a common prefix, so leave empty and let the collector fall back
+# to its generic substring matcher.
 capi:
   cluster_name_prefix: ""
 
-# Per-build artifact collector. "capi" knows the artifacts/clusters/{name}/
-# machines/{container}/... layout used by Cluster API providers.
+# Per-build artifact collector.
 artifacts:
   collector: "capi"
 
-# AI module + endpoint. The system prompt is composed at fetcher startup
-# from the engine's universal Prow base + this repo's prompts/system.md +
-# the engine's JSON response schema, so changing the model behavior is
-# usually done by editing prompts/system.md, not this file.
-#
-# Endpoint, model, and headers can target any OpenAI-compatible chat
-# completions API. The defaults here point at GitHub Copilot; see
-# docs/ai-providers.md in the engine repo for Nvidia Dynamo / Azure
-# OpenAI / OpenAI / Ollama snippets.
-# Endpoint and model are intentionally NOT set here. They are supplied
-# via repo variables (`vars.AI_MODEL` / `vars.AI_ENDPOINT`) on this
-# consumer (see .github/workflows/deploy.yml). Keeping them out of this
-# public file prevents internal-only model identifiers and private
-# endpoint URLs from being exposed in the repo or in deployed JSON. See
-# docs/ai-providers.md > "Hiding the model identifier" in the engine
-# repo for details.
+# AI analysis settings. Endpoint and model come from repo variables
+# (vars.AI_MODEL / vars.AI_ENDPOINT) wired in .github/workflows/deploy.yml.
 ai:
   module: "capi"
 
   # Per-failure evidence collected by the capi module before each AI call.
-  # Every field below is optional; omitting a field falls back to the
-  # engine default. CAPI core only customizes machine_logs (CAPD jobs
-  # collect a kern.log alongside the standard kubelet/containerd/journal
-  # set) and the upstream controller_logs defaults; everything else is
-  # the engine default.
+  # CAPD jobs add kern.log to the engine default machine_logs set.
   evidence:
     machine_logs:
       - kubelet.log
@@ -118,15 +79,9 @@ ai:
       - journal.log
       - kern.log
 
-  # Agentic mode: instead of the curator pre-fetching evidence based on the
-  # `evidence:` block above, the LLM browses GCS itself via four function-
-  # calling tools (list/read/tail/grep) and decides what's relevant. Requires
-  # an endpoint that supports OpenAI-style function calling (Copilot does).
-  #
-  # always: true routes every failure through agentic mode regardless of
-  # module heuristics. Used here for end-to-end validation against the
-  # CAPI dataset before any AgenticPreferrer heuristics ship in the engine.
-  # Expect ~10x the token cost and ~7x the wall clock vs curator mode.
+  # Agentic mode lets the LLM browse GCS itself via function-calling tools.
+  # always: true routes every failure through agentic for end-to-end
+  # validation; expect ~10x tokens / ~7x wall clock vs curator mode.
   agentic:
     enabled: true
     always: true

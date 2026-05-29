@@ -1,9 +1,7 @@
 name: Deploy Dashboard
 
-# Builds and deploys the CAPI Prow AI Dashboard to this repo's GitHub Pages.
-# Engine code lives in willie-yao/prow-ai-dashboard. This repo owns
-# project.yaml and prompts/system.md (the project's AI instructions); the
-# reusable workflow reads them via project_dir.
+# Calls the reusable workflow in willie-yao/prow-ai-dashboard to build and
+# deploy this repo's CAPI Prow dashboard to GitHub Pages.
 
 on:
   schedule:
