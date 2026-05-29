@@ -7,7 +7,8 @@ short_name: "CAPI"
 
 # Where in kubernetes/test-infra to find the prow job YAMLs.
 source:
-  test_infra_path: "config/jobs/kubernetes-sigs/cluster-api"
+  test_infra_paths:
+    - "config/jobs/kubernetes-sigs/cluster-api"
   file_prefix: "cluster-api-"
 
 # Only jobs that advertise this testgrid dashboard are included.
